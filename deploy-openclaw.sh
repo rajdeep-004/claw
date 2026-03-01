@@ -32,7 +32,7 @@ then
       sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     sudo apt update
-    sudo apt install -y docker docker-compose
+    sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
     sudo systemctl enable docker
     sudo systemctl start docker
