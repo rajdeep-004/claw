@@ -5,60 +5,66 @@ set -e
 PROJECT_DIR="$HOME/openclaw-stack"
 
 echo "=========================================="
-echo "OpenClaw + Ollama Full Cleanup"
+echo "OpenClaw + Ollama COMPLETE REMOVAL"
 echo "=========================================="
-
 echo ""
-read -p "This will REMOVE containers, volumes, and models. Continue? (y/N): " confirm
+echo "This will:"
+echo "- Remove containers"
+echo "- Remove volumes"
+echo "- Remove images"
+echo "- Remove networks"
+echo "- Remove project directory"
+echo "- Remove swap (if exists)"
+echo "- UNINSTALL DOCKER COMPLETELY"
+echo ""
+read -p "Are you absolutely sure? (type YES to continue): " confirm
 
-if [[ "$confirm" != "y" ]]; then
+if [[ "$confirm" != "YES" ]]; then
     echo "Aborted."
     exit 0
 fi
 
 ############################################
-# 1️⃣ Stop Containers
+# 1️⃣ Stop & Remove Containers
 ############################################
 
 if command -v docker &> /dev/null; then
+    echo "Stopping all containers..."
+    docker stop $(docker ps -aq) 2>/dev/null || true
 
-    echo "Stopping containers..."
-    docker stop openclaw 2>/dev/null || true
-    docker stop ollama 2>/dev/null || true
-
-    echo "Removing containers..."
-    docker rm openclaw 2>/dev/null || true
-    docker rm ollama 2>/dev/null || true
+    echo "Removing all containers..."
+    docker rm -f $(docker ps -aq) 2>/dev/null || true
 
     ############################################
     # 2️⃣ Remove Volumes
     ############################################
 
-    echo "Removing volumes..."
-    docker volume rm openclaw-stack_ollama-data 2>/dev/null || true
-    docker volume prune -f
+    echo "Removing all volumes..."
+    docker volume rm $(docker volume ls -q) 2>/dev/null || true
 
     ############################################
-    # 3️⃣ Remove Network
+    # 3️⃣ Remove Networks
     ############################################
 
-    docker network rm claw-net 2>/dev/null || true
+    echo "Removing custom networks..."
+    docker network rm $(docker network ls -q) 2>/dev/null || true
 
     ############################################
     # 4️⃣ Remove Images
     ############################################
 
-    echo "Removing related images..."
+    echo "Removing all images..."
+    docker rmi -f $(docker images -aq) 2>/dev/null || true
 
-    docker image rm ollama/ollama:latest 2>/dev/null || true
-    docker image rm ghcr.io/openclaw/openclaw:latest 2>/dev/null || true
+    ############################################
+    # 5️⃣ System Prune
+    ############################################
 
-    docker image prune -f
-
+    docker system prune -a -f --volumes || true
 fi
 
 ############################################
-# 5️⃣ Remove Project Directory
+# 6️⃣ Remove Project Directory
 ############################################
 
 if [ -d "$PROJECT_DIR" ]; then
@@ -67,33 +73,56 @@ if [ -d "$PROJECT_DIR" ]; then
 fi
 
 ############################################
-# 6️⃣ Optional Swap Removal
+# 7️⃣ Remove Swap (if exists)
 ############################################
 
-read -p "Remove swapfile (if created)? (y/N): " swapconfirm
-
-if [[ "$swapconfirm" == "y" ]]; then
-    sudo swapoff /swapfile 2>/dev/null || true
+if [ -f /swapfile ]; then
+    echo "Removing swapfile..."
+    sudo swapoff /swapfile || true
     sudo rm -f /swapfile
     sudo sed -i '/\/swapfile/d' /etc/fstab
-    echo "Swap removed."
 fi
 
 ############################################
-# 7️⃣ Optional Docker Removal
+# 8️⃣ Uninstall Docker Completely
 ############################################
 
-read -p "Completely uninstall Docker? (y/N): " dockerconfirm
+echo "Uninstalling Docker packages..."
 
-if [[ "$dockerconfirm" == "y" ]]; then
-    sudo apt remove docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-    sudo rm -rf /var/lib/docker
-    echo "Docker removed."
+sudo systemctl stop docker 2>/dev/null || true
+
+sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker.io docker-compose podman-docker containerd runc || true
+
+sudo apt purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin docker.io docker-compose podman-docker containerd runc || true
+
+############################################
+# 9️⃣ Remove Docker Data
+############################################
+
+echo "Removing Docker data directories..."
+
+sudo rm -rf /var/lib/docker
+sudo rm -rf /var/lib/containerd
+sudo rm -rf /etc/docker
+sudo rm -rf /etc/apt/sources.list.d/docker.list
+sudo rm -rf /etc/apt/keyrings/docker.gpg
+
+############################################
+# 🔟 Autoremove + Clean
+############################################
+
+sudo apt autoremove -y
+sudo apt autoclean -y
+
+echo ""
+echo "=========================================="
+echo "FULL CLEAN COMPLETE"
+echo "=========================================="
+echo ""
+echo "Docker installed? Checking..."
+if command -v docker &> /dev/null; then
+    echo "WARNING: docker still present."
+else
+    echo "Docker fully removed."
 fi
-
 echo ""
-echo "=========================================="
-echo "Cleanup Complete"
-echo "=========================================="
-echo ""
-docker ps || true
