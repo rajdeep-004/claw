@@ -1,14 +1,3 @@
-Specification:
-
-* Ubuntu (VM or VPS)
-* 3 vCPU / 4GB RAM / 50GB SSD
-* Docker deployment
-* Ollama + OpenClaw in separate containers
-* Telegram integration
-* Low-memory optimized
-
----
-
 # 🦞 OpenClaw + Ollama (Low-Spec Deployment)
 
 Minimal, production-ready Docker deployment for running:
